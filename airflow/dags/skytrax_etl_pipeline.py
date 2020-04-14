@@ -1,8 +1,6 @@
 import operator
 from datetime import datetime, timedelta
-# from operators import (StageToRedshiftOperator, LoadFactOperator,
-#                        LoadDimensionOperator, DataQualityOperator, CreateTablesOperator)
-from operators import (CreateTablesOperator)
+from operators import (CreateTablesOperator, SourceToRedshiftOperator)
 from airflow.operators.dummy_operator import DummyOperator
 from helpers import SqlQueries
 
