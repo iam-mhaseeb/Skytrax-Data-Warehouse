@@ -27,31 +27,53 @@ start_operator = CreateTablesOperator(
     task_id='Begin_execution',
     dag=dag,
     redshift_conn_id='redshift',
-    sql_commands=SqlQueries.clean_up_quries
+    sql_commands=SqlQueries.create_table_queries
 )
-#
-# json_path = "s3://{}/{}".format('skytrax-warehouse/source-data', 'log_json_path.json')
-# stage_events_to_redshift = StageToRedshiftOperator(
-#     task_id='Stage_events',
-#     dag=dag,
-#     table='staging_events',
-#     redshift_conn_id='redshift',
-#     aws_credentials_id='aws_credentials',
-#     s3_bucket='udacity-dend',
-#     s3_key='log_data/2018/11/',
-#     copy_extra="FORMAT AS JSON '{}' REGION 'us-west-2'".format(json_path)
-# )
-#
-# stage_songs_to_redshift = StageToRedshiftOperator(
-#     task_id='Stage_songs',
-#     dag=dag,
-#     table='staging_songs',
-#     redshift_conn_id='redshift',
-#     aws_credentials_id='aws_credentials',
-#     s3_bucket='udacity-dend',
-#     s3_key='song_data/A/A/',
-#     copy_extra="FORMAT AS JSON 'auto' REGION 'us-west-2' TRUNCATECOLUMNS"
-# )
+
+stage_airlines_to_redshift = SourceToRedshiftOperator(
+    task_id='Stage_Airlines',
+    dag=dag,
+    table='stagging_airline',
+    redshift_conn_id='redshift',
+    aws_credentials_id='aws_credentials',
+    s3_bucket='skytrax-warehouse',
+    s3_key='source-data/airline.csv',
+    copy_extra="FORMAT AS JSON 'auto' REGION 'us-east-2' TRUNCATECOLUMNS"
+)
+
+stage_airports_to_redshift = SourceToRedshiftOperator(
+    task_id='Stage_Airports',
+    dag=dag,
+    table='stagging_airport',
+    redshift_conn_id='redshift',
+    aws_credentials_id='aws_credentials',
+    s3_bucket='skytrax-warehouse',
+    s3_key='source-data/airport.json',
+    copy_extra="FORMAT AS JSON 'auto' REGION 'us-east-2' TRUNCATECOLUMNS"
+)
+
+stage_lounges_to_redshift = SourceToRedshiftOperator(
+    task_id='Stage_Lounges',
+    dag=dag,
+    table='stagging_lounge',
+    redshift_conn_id='redshift',
+    aws_credentials_id='aws_credentials',
+    s3_bucket='skytrax-warehouse',
+    s3_key='source-data/lounge.csv',
+    copy_extra="FORMAT AS JSON 'auto' REGION 'us-east-2' TRUNCATECOLUMNS"
+)
+
+stage_seats_to_redshift = SourceToRedshiftOperator(
+    task_id='Stage_Seats',
+    dag=dag,
+    table='stagging_seat',
+    redshift_conn_id='redshift',
+    aws_credentials_id='aws_credentials',
+    s3_bucket='skytrax-warehouse',
+    s3_key='source-data/seat.csv',
+    copy_extra="FORMAT AS JSON 'auto' REGION 'us-east-2' TRUNCATECOLUMNS"
+)
+
 #
 # load_songplays_table = LoadFactOperator(
 #     task_id='Load_songplays_fact_table',
@@ -112,9 +134,11 @@ start_operator = CreateTablesOperator(
 #
 end_operator = DummyOperator(task_id='Stop_execution',  dag=dag)
 #
-# start_operator >> stage_events_to_redshift
-# start_operator >> stage_songs_to_redshift
-#
+start_operator >> stage_airlines_to_redshift
+start_operator >> stage_airports_to_redshift
+start_operator >> stage_lounges_to_redshift
+start_operator >> stage_seats_to_redshift
+
 # stage_events_to_redshift >> load_songplays_table
 # stage_songs_to_redshift >> load_songplays_table
 #
@@ -124,5 +148,3 @@ end_operator = DummyOperator(task_id='Stop_execution',  dag=dag)
 # load_songplays_table >> load_song_dimension_table >> run_quality_checks
 #
 # run_quality_checks >> end_operator
-
-start_operator >> end_operator
