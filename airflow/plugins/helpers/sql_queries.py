@@ -139,7 +139,7 @@ class SqlQueries:
     SORTKEY(name)
     DISTSTYLE AUTO;
     
-    CREATE TABLE IF NOT EXISTS public.lounge(
+    CREATE TABLE IF NOT EXISTS public.lounges(
         id                   INT IDENTITY(1,1) PRIMARY KEY ENCODE ZSTD,
         airline_id           INT ENCODE ZSTD,
         name                 VARCHAR(100) NOT NULL DEFAULT 'Unknown' ENCODE ZSTD,
@@ -214,5 +214,48 @@ class SqlQueries:
     )
     SORTKEY(id)
     DISTSTYLE AUTO;
+    """)
+
+    passengers_table_insert = ("""
+    INSERT INTO public.passengers (name, country, type)
+    SELECT * FROM (
+        SELECT DISTINCT author, author_country, type_traveller
+        FROM public.stagging_airline
+        UNION
+        SELECT DISTINCT author, author_country, type_traveller
+        FROM public.stagging_airport
+        UNION
+        SELECT DISTINCT author, author_country, type_traveller
+        FROM public.stagging_lounge
+        UNION
+        SELECT DISTINCT author, author_country, type_traveller
+        FROM public.stagging_seat
+    );
+    """)
+
+    airports_table_insert = ("""
+    INSERT INTO public.airports (name, link, experience)
+    SELECT DISTINCT airport_name, link, experience_airport
+    FROM public.stagging_airport;
+    """)
+
+    airlines_table_insert = ("""
+    INSERT INTO public.airlines (name, link, route, cabin)
+    SELECT DISTINCT airline_name, link, route, cabin_flown
+    FROM public.stagging_airline;
+    """)
+
+    aircrafts_table_insert = ("""
+    INSERT INTO public.aircrafts (airline_id, name, seat_layout)
+    SELECT DISTINCT a.id, ss.aircraft, ss.seat_layout
+    FROM public.stagging_seat AS ss
+    LEFT JOIN public.airlines AS a ON ss.name = a.name;
+    """)
+
+    lounges_table_insert = ("""
+    INSERT INTO public.lounges (airline_id, name, type)
+    SELECT DISTINCT a.id, sl.lounge_name, sl.lounge_type
+    FROM public.stagging_lounge AS sl
+    LEFT JOIN public.airlines AS a ON ss.name = a.name;
     """)
 
