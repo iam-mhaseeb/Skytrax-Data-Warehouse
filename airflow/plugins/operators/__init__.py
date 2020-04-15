@@ -1,4 +1,4 @@
-from operators.stage_redshift import SourceToRedshiftOperator
+from operators.source_to_redshift import SourceToRedshiftOperator
 from operators.load_fact import LoadFactOperator
 from operators.load_dimension import LoadDimensionOperator
 from operators.data_quality import DataQualityOperator

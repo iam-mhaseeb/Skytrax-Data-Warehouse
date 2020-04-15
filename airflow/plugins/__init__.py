@@ -6,10 +6,10 @@ import operators
 import helpers
 
 # Defining the plugin class
-class UdacityPlugin(AirflowPlugin):
-    name = "udacity_plugin"
+class SkytaxPlugin(AirflowPlugin):
+    name = "skytrax_plugin"
     operators = [
-        operators.StageToRedshiftOperator,
+        operators.SourceToRedshiftOperator,
         operators.LoadFactOperator,
         operators.LoadDimensionOperator,
         operators.DataQualityOperator,
