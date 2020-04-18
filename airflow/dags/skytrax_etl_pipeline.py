@@ -1,6 +1,6 @@
 import operator
 from datetime import datetime, timedelta
-from operators import (CreateTablesOperator, SourceToRedshiftOperator, LoadDimensionOperator, DataQualityOperator)
+from operators import (CreateTablesOperator, SourceToRedshiftOperator, LoadDimensionOperator, DataQualityOperator, LoadFactOperator)
 from airflow.operators.dummy_operator import DummyOperator
 from helpers import SqlQueries
 
@@ -131,22 +131,15 @@ load_lounges_dimension_table = LoadDimensionOperator(
     sql=SqlQueries.lounges_table_insert
 )
 
-#
-# load_songplays_table = LoadFactOperator(
-#     task_id='Load_songplays_fact_table',
-#     dag=dag,
-#     redshift_conn_id='redshift',
-#     sql=SqlQueries.songplay_table_insert
-# )
-#
 
-# test_cases = [(SqlQueries.songplay_count_test, operator.gt, 0),
-#               (SqlQueries.users_count_test, operator.gt, 0), (SqlQueries.songs_count_test, operator.gt, 0),
-#               (SqlQueries.artists_count_test, operator.gt, 0), (SqlQueries.time_count_test, operator.gt, 0),
-#               (SqlQueries.users_null_test, operator.eq, 0), (SqlQueries.songs_null_test, operator.eq, 0),
-#               (SqlQueries.artists_null_test, operator.eq, 0), (SqlQueries.time_null_test, operator.eq, 0),
-#              ]
-#
+load_fact_ratings_table = LoadFactOperator(
+    task_id='Load_fact_ratings_fact_table',
+    dag=dag,
+    redshift_conn_id='redshift',
+    sql=SqlQueries.fact_ratings_table_insert
+)
+
+
 ensure_data_load_in_dims = DataQualityOperator(
     task_id='Run_data_quality_checks',
     dag=dag,
@@ -173,4 +166,6 @@ stage_lounges_to_redshift >> load_passengers_dimension_table
 stage_seats_to_redshift >> load_passengers_dimension_table
 load_passengers_dimension_table >> ensure_data_load_in_dims
 
-ensure_data_load_in_dims >> end_operator
+ensure_data_load_in_dims >> load_fact_ratings_table
+
+load_fact_ratings_table >> end_operator

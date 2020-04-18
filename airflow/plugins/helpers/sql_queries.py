@@ -73,7 +73,7 @@ class SqlQueries:
         washrooms_rating                FLOAT DEFAULT 0.0 ENCODE ZSTD,
         wifi_connectivity_rating        FLOAT DEFAULT 0.0 ENCODE ZSTD,
         staff_service_rating            FLOAT DEFAULT 0.0 ENCODE ZSTD,
-        recommended                    VARCHAR(100) DEFAULT 'Unknown' ENCODE ZSTD
+        recommended                     VARCHAR(100) DEFAULT 'Unknown' ENCODE ZSTD
     );
     
     CREATE TABLE IF NOT EXISTS public.stagging_seat(
@@ -203,7 +203,6 @@ class SqlQueries:
         seat_width_rating                     FLOAT NOT NULL DEFAULT 0.0 ENCODE ZSTD,
         seat_aisle_space_rating               FLOAT NOT NULL DEFAULT 0.0 ENCODE ZSTD,
         seat_viewing_tv_rating                FLOAT NOT NULL DEFAULT 0.0 ENCODE ZSTD,
-        seat_shopping_rating                  FLOAT NOT NULL DEFAULT 0.0 ENCODE ZSTD,
         seat_power_supply_rating              FLOAT NOT NULL DEFAULT 0.0 ENCODE ZSTD,
         seat_storage_rating                   FLOAT NOT NULL DEFAULT 0.0 ENCODE ZSTD,
         seat_recommended                      BOOL NOT NULL DEFAULT FALSE ENCODE ZSTD,
@@ -327,7 +326,6 @@ class SqlQueries:
         seat_width_rating,
         seat_aisle_space_rating,
         seat_viewing_tv_rating,
-        seat_shopping_rating,
         seat_power_supply_rating,
         seat_storage_rating,
         seat_recommended,
@@ -335,4 +333,88 @@ class SqlQueries:
         overall_recommendation
     )
     SELECT
+        p.id,
+        ap.id,
+        al.id,
+        ac.id,
+        l.id,
+        sap.date_visit,
+        sl.date_visit,
+        ss.date_flown,
+        sal.review_date,
+        sap.review_date,
+        sl.review_date,
+        ss.review_date,
+        COALESCE(sal.overall_rating, 0.0),
+        COALESCE(sal.seat_comfort_rating, 0.0),
+        COALESCE(sal.cabin_staff_rating, 0.0),
+        COALESCE(sal.food_beverages_rating, 0.0),
+        COALESCE(sal.inflight_entertainment_rating, 0.0),
+        COALESCE(sal.ground_service_rating, 0.0),
+        COALESCE(sal.wifi_connectivity_rating, 0.0),
+        COALESCE(sal.value_money_rating, 0.0),
+        CASE WHEN COALESCE(sal.recommended, '0')::INT = 1 THEN TRUE ELSE FALSE END,
+        COALESCE(sap.overall_rating, 0.0),
+        COALESCE(sap.queuing_rating, 0.0),
+        COALESCE(sap.terminal_cleanness_rating, 0.0),
+        COALESCE(sap.terminal_seating_rating, 0.0),
+        COALESCE(sap.terminal_signs_rating, 0.0),
+        COALESCE(sap.food_beverages_rating, 0.0),
+        COALESCE(sap.airport_shopping_rating, 0.0),
+        COALESCE(sap.wifi_connectivity_rating, 0.0),
+        COALESCE(sap.airport_staff_rating, 0.0),
+        CASE WHEN COALESCE(sap.recommended, '0')::INT = 1 THEN TRUE ELSE FALSE END,
+        COALESCE(sl.overall_rating, 0.0),
+        COALESCE(sl.comfort_rating, 0.0),
+        COALESCE(sl.cleanness_rating, 0.0),
+        COALESCE(sl.washrooms_rating, 0.0),
+        COALESCE(sl.wifi_connectivity_rating, 0.0),
+        COALESCE(sl.staff_service_rating, 0.0),
+        CASE WHEN COALESCE(sl.recommended, '0')::INT = 1 THEN TRUE ELSE FALSE END,
+        COALESCE(ss.overall_rating, 0.0),
+        COALESCE(ss.seat_legroom_rating, 0.0),
+        COALESCE(ss.seat_recline_rating, 0.0),
+        COALESCE(ss.seat_width_rating, 0.0),
+        COALESCE(ss.aisle_space_rating, 0.0),
+        COALESCE(ss.viewing_tv_rating, 0.0),
+        COALESCE(ss.power_supply_rating, 0.0),
+        COALESCE(ss.seat_storage_rating, 0.0),
+        CASE WHEN COALESCE(ss.recommended, '0')::INT = 1 THEN TRUE ELSE FALSE END,
+        (COALESCE(sal.overall_rating, 0.0) + COALESCE(sap.overall_rating, 0.0) + COALESCE(sl.overall_rating, 0.0) + COALESCE(ss.overall_rating, 0.0))/10,
+        CASE WHEN (ROUND(COALESCE(sal.recommended, '0')::INT + COALESCE(sap.recommended, '0')::INT + COALESCE(sl.recommended, '0')::INT + COALESCE(ss.recommended, '0')::INT)::INT/4) = 1 THEN TRUE ELSE FALSE END
+    FROM stagging_airline AS sal
+    LEFT JOIN stagging_airport sap
+      ON sal.author = sap.author
+     AND sal.author_country = sap.author_country
+     AND sal.type_traveller = sap.type_traveller
+    LEFT JOIN stagging_lounge sl
+      ON sal.author = sl.author
+     AND sal.author_country = sl.author_country
+     AND sal.type_traveller = sl.type_traveller
+    LEFT JOIN stagging_seat ss
+      ON sal.author = ss.author
+     AND sal.author_country = ss.author_country
+     AND sal.type_traveller = ss.type_traveller
+    LEFT JOIN passengers as p
+      ON sal.author = p.name
+     AND sal.author_country = p.country
+     AND sal.type_traveller = p.type
+    LEFT JOIN airports as ap
+      ON COALESCE(sap.airport_name, 'Unknown') = ap.name
+     AND COALESCE(sap.link, 'Unknown') = ap.link
+     AND COALESCE(sap.experience_airport, 'Unknown') = ap.experience
+    LEFT JOIN airlines as al
+      ON COALESCE(sal.airline_name, 'Unknown') = al.name
+     AND COALESCE(sal.link, 'Unknown') = al.link
+     AND COALESCE(sal.route, 'Unknown') = al.route
+     AND COALESCE(sal.cabin_flown, 'Unknown') = al.cabin
+    LEFT JOIN aircrafts as ac
+      ON al.id = ac.airline_id
+     AND COALESCE(ss.aircraft, 'Unknown') = ac.name
+     AND COALESCE(ss.seat_layout, 'Unknown') = ac.seat_layout
+    LEFT JOIN lounges as l
+      ON al.id = l.airline_id
+     AND ap.id = l.airport_id
+     AND COALESCE(sl.lounge_name, 'Unknown') = l.name
+     AND COALESCE(sl.lounge_type, 'Unknown') = l.type;
     """)
