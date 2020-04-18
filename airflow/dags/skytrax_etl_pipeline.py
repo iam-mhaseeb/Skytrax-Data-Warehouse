@@ -54,8 +54,8 @@ stage_airports_to_redshift = SourceToRedshiftOperator(
     redshift_conn_id='redshift',
     aws_credentials_id='aws_credentials',
     s3_bucket='skytrax-warehouse',
-    s3_key='source-data/airport.csv',
-    copy_extra="FORMAT AS CSV  REGION 'us-east-2' TRUNCATECOLUMNS EMPTYASNULL BLANKSASNULL ACCEPTANYDATE DATEFORMAT 'auto' IGNOREHEADER 1"
+    s3_key='source-data/airports/',
+    copy_extra="FORMAT AS JSON 'auto'  REGION 'us-east-2' TRUNCATECOLUMNS EMPTYASNULL BLANKSASNULL ACCEPTANYDATE DATEFORMAT 'auto'"
 )
 
 stage_lounges_to_redshift = SourceToRedshiftOperator(
