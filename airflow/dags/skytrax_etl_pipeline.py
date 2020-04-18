@@ -1,6 +1,6 @@
 import operator
 from datetime import datetime, timedelta
-from operators import (CreateTablesOperator, SourceToRedshiftOperator, LoadDimensionOperator)
+from operators import (CreateTablesOperator, SourceToRedshiftOperator, LoadDimensionOperator, DataQualityOperator)
 from airflow.operators.dummy_operator import DummyOperator
 from helpers import SqlQueries
 
@@ -34,44 +34,56 @@ stage_airlines_to_redshift = SourceToRedshiftOperator(
     task_id='Stage_Airlines',
     dag=dag,
     table='stagging_airline',
+    columns="""airline_name,link,title,author,author_country,review_date,review_content,aircraft,type_traveller,cabin_flown,
+               route,overall_rating,seat_comfort_rating,cabin_staff_rating,food_beverages_rating,inflight_entertainment_rating,
+               ground_service_rating,wifi_connectivity_rating,value_money_rating,recommended""",
     redshift_conn_id='redshift',
     aws_credentials_id='aws_credentials',
     s3_bucket='skytrax-warehouse',
     s3_key='source-data/airline.csv',
-    copy_extra="FORMAT AS JSON 'auto' REGION 'us-east-2' TRUNCATECOLUMNS"
+    copy_extra="FORMAT AS CSV  REGION 'us-east-2' TRUNCATECOLUMNS EMPTYASNULL BLANKSASNULL ACCEPTANYDATE DATEFORMAT 'auto' IGNOREHEADER 1"
 )
 
 stage_airports_to_redshift = SourceToRedshiftOperator(
     task_id='Stage_Airports',
     dag=dag,
     table='stagging_airport',
+    columns="""airport_name,link,title,author,author_country,review_date,review_content,experience_airport,date_visit,type_traveller,
+               overall_rating,queuing_rating,terminal_cleanness_rating,terminal_seating_rating,terminal_signs_rating,
+               food_beverages_rating,airport_shopping_rating,wifi_connectivity_rating,airport_staff_rating,recommended""",
     redshift_conn_id='redshift',
     aws_credentials_id='aws_credentials',
     s3_bucket='skytrax-warehouse',
-    s3_key='source-data/airport.json',
-    copy_extra="FORMAT AS JSON 'auto' REGION 'us-east-2' TRUNCATECOLUMNS"
+    s3_key='source-data/airport.csv',
+    copy_extra="FORMAT AS CSV  REGION 'us-east-2' TRUNCATECOLUMNS EMPTYASNULL BLANKSASNULL ACCEPTANYDATE DATEFORMAT 'auto' IGNOREHEADER 1"
 )
 
 stage_lounges_to_redshift = SourceToRedshiftOperator(
     task_id='Stage_Lounges',
     dag=dag,
     table='stagging_lounge',
+    columns="""airline_name,link,title,author,author_country,review_date,review_content,lounge_name,airport,lounge_type,
+               date_visit,type_traveller,overall_rating,comfort_rating,cleanness_rating,bar_beverages_rating,
+               catering_rating,washrooms_rating,wifi_connectivity_rating,staff_service_rating,recommended""",
     redshift_conn_id='redshift',
     aws_credentials_id='aws_credentials',
     s3_bucket='skytrax-warehouse',
     s3_key='source-data/lounge.csv',
-    copy_extra="FORMAT AS JSON 'auto' REGION 'us-east-2' TRUNCATECOLUMNS"
+    copy_extra="FORMAT AS CSV  REGION 'us-east-2' TRUNCATECOLUMNS EMPTYASNULL BLANKSASNULL ACCEPTANYDATE DATEFORMAT 'auto' IGNOREHEADER 1"
 )
 
 stage_seats_to_redshift = SourceToRedshiftOperator(
     task_id='Stage_Seats',
     dag=dag,
     table='stagging_seat',
+    columns="""airline_name,link,title,author,author_country,review_date,review_content,aircraft,seat_layout,date_flown,
+               cabin_flown,type_traveller,overall_rating,seat_legroom_rating,seat_recline_rating,seat_width_rating,
+               aisle_space_rating,viewing_tv_rating,power_supply_rating,seat_storage_rating,recommended""",
     redshift_conn_id='redshift',
     aws_credentials_id='aws_credentials',
     s3_bucket='skytrax-warehouse',
     s3_key='source-data/seat.csv',
-    copy_extra="FORMAT AS JSON 'auto' REGION 'us-east-2' TRUNCATECOLUMNS"
+    copy_extra="FORMAT AS CSV  REGION 'us-east-2' TRUNCATECOLUMNS EMPTYASNULL BLANKSASNULL ACCEPTANYDATE DATEFORMAT 'auto' IGNOREHEADER 1"
 )
 
 load_passengers_dimension_table = LoadDimensionOperator(
@@ -135,14 +147,19 @@ load_lounges_dimension_table = LoadDimensionOperator(
 #               (SqlQueries.artists_null_test, operator.eq, 0), (SqlQueries.time_null_test, operator.eq, 0),
 #              ]
 #
-# run_quality_checks = DataQualityOperator(
-#     task_id='Run_data_quality_checks',
-#     dag=dag,
-#     redshift_conn_id='redshift',
-#     test_cases=test_cases
-# )
-#
-finish_dimensional_tables_load = DummyOperator(task_id='Finish_dimensional_tables_load',  dag=dag)
+ensure_data_load_in_dims = DataQualityOperator(
+    task_id='Run_data_quality_checks',
+    dag=dag,
+    redshift_conn_id='redshift',
+    test_cases=[
+        (SqlQueries.airlines_count_test, operator.gt, 0),
+        (SqlQueries.aircrafts_count_test, operator.gt, 0),
+        (SqlQueries.lounges_count_test, operator.gt, 0),
+        (SqlQueries.aircrafts_count_test, operator.gt, 0),
+        (SqlQueries.aircrafts_count_test, operator.gt, 0),
+    ]
+)
+
 end_operator = DummyOperator(task_id='Stop_execution',  dag=dag)
 
 start_operator >> stage_airlines_to_redshift
@@ -150,9 +167,10 @@ start_operator >> stage_airports_to_redshift
 start_operator >> stage_lounges_to_redshift
 start_operator >> stage_seats_to_redshift
 
-stage_airlines_to_redshift >> load_airlines_dimension_table >> finish_dimensional_tables_load
-stage_airports_to_redshift >> load_airports_dimension_table >> finish_dimensional_tables_load
-stage_lounges_to_redshift >> load_lounges_dimension_table >> finish_dimensional_tables_load
-stage_seats_to_redshift >> load_aircrafts_dimension_table >> load_passengers_dimension_table >> finish_dimensional_tables_load
+stage_airlines_to_redshift >> load_airlines_dimension_table >> load_aircrafts_dimension_table >> load_passengers_dimension_table
+stage_airports_to_redshift >> load_airports_dimension_table >> load_lounges_dimension_table >> load_passengers_dimension_table
+stage_lounges_to_redshift >> load_passengers_dimension_table
+stage_seats_to_redshift >> load_passengers_dimension_table
+load_passengers_dimension_table >> ensure_data_load_in_dims
 
-finish_dimensional_tables_load >> end_operator
+ensure_data_load_in_dims >> end_operator

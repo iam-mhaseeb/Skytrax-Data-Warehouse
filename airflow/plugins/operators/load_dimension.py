@@ -8,7 +8,7 @@ class LoadDimensionOperator(BaseOperator):
 
     @apply_defaults
     def __init__(self,
-                 append_only=True,
+                 append_only=False,
                  table="",
                  redshift_conn_id="",
                  sql="",
