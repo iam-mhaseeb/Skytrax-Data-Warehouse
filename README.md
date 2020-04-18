@@ -86,12 +86,6 @@ Open the Metabase UI by hitting http://localhost:3000 in browser & setup your me
 
 You should be able to play with data after running dag successfully like I made dashboard in pictures below:
 
-Summary
-![Summary](imgs/dag_view.PNG)
-
-
-You can explore dag further in different views like below:
-
 Dashboard1:
 ![DAG](imgs/dashboard1.png)
 
